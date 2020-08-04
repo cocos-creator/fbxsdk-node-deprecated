@@ -1,0 +1,45 @@
+
+version: 1.0.{build}
+
+image:
+  - Visual Studio 2019
+  - macOS-Mojave
+platform:
+    - x64
+configuration:
+  - Debug
+  - Release
+environment:
+  TargetNodeVersion: "v12.0.0"
+build_script:
+  - ps: ./CI/AppveyorBuild.ps1
+artifacts:
+  - path: '*.zip'
+    name: archive
+deploy:
+  release: fbxsdk-node-v$(appveyor_build_version)
+  description: ''
+  provider: GitHub
+  auth_token:
+    secure: PJCjCz+L27cHRRRdl3ZaxQrX6hhkQ3Sh3DE1azrtfAe7Q2Eo/Hgii9NxBF68W1Nj
+  artifact: archive
+  draft: true
+  prerelease: true
+  on:
+    branch: master
+    APPVEYOR_REPO_TAG: true
+for:
+  -
+    matrix:
+      only:
+        - image: Visual Studio 2019
+    environment:
+      nodejs_version: "14.0.0"
+    install:
+      - ps: Install-product node $env:nodejs_version x64
+  -
+    matrix:
+      only:
+        - image: macOS-Mojave
+    environment:
+      nodejs_version: "14.4.0"

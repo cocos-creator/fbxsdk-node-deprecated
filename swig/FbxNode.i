@@ -68,6 +68,13 @@ public:
 
     void SetTransformationInheritType(FbxTransform::EInheritType pInheritType);
     void GetTransformationInheritType(FbxTransform::EInheritType& pInheritType);
+    %extend {
+        FbxTransform::EInheritType GetTransformationInheritType() {
+            FbxTransform::EInheritType result;
+            $self->GetTransformationInheritType(result);
+            return result;
+        }
+    }
     
 	enum EPivotSet
 	{
