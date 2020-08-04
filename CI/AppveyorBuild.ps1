@@ -2,6 +2,10 @@
 Write-Host "APPVEYOR_BUILD_WORKER_IMAGE: $env:APPVEYOR_BUILD_WORKER_IMAGE"
 Write-Host "PLATFORM(Appveyor): $env:PLATFORM"
 Write-Host "CONFIGURATION(Appveyor): $env:CONFIGURATION"
+Write-Host "Is tagged build: $env:APPVEYOR_REPO_TAG"
+if ($env:APPVEYOR_REPO_TAG) {
+    Write-Host "Tag name: $env:APPVEYOR_REPO_TAG_NAME"
+}
 
 $isWindowsImage = ($env:APPVEYOR_BUILD_WORKER_IMAGE).StartsWith('Visual Studio')
 $configuration = $env:CONFIGURATION
