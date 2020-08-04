@@ -12,11 +12,14 @@
                     'files': [ '<(FBXSDK)/lib/vs2017/x64/release/libfbxsdk.dll' ]
                 }]
             }],
-            ['OS!="win"', {
-                'libraries': [ '<(FBXSDK)/lib/vs2017/x64/release/libfbxsdk.lib' ],
+            ['OS=="mac"', {
+                'xcode_settings': {
+                    'GCC_ENABLE_CPP_EXCEPTIONS': 'YES'
+                },
+                'libraries': [ '<(FBXSDK)/lib/clang/release/libfbxsdk.a' ],
                 'copies': [{
                     'destination': '<(PRODUCT_DIR)',
-                    'files': [ '<(FBXSDK)/lib/vs2017/x64/release/libfbxsdk.dll' ]
+                    'files': [ '<(FBXSDK)/lib/clang/release/libfbxsdk.dylib' ]
                 }]
             }]
         ]

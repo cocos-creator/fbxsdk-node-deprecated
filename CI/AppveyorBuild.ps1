@@ -12,92 +12,87 @@ $configuration = $env:CONFIGURATION
 
 Write-Host "Is Windows image: $isWindowsImage"
 
-# function installNodeGyp {
-#     if ($isWindowsImage) {
-#         & npm install -g windows-build-tools | Out-Host
-#     }
-#     # Note: we do not have an comfortable way to 
-#     # specific gyp variables at 7.x
-#     & npm install -g node-gyp@6.x | Out-Host
-# }
+function installNodeGyp {
+    if ($isWindowsImage) {
+        & npm install -g windows-build-tools | Out-Host
+    }
+    # Note: we do not have an comfortable way to 
+    # specific gyp variables at 7.x
+    & npm install -g node-gyp@6.x | Out-Host
+}
 
-# function installFbxSdk {
-#     New-Item -ItemType Directory -Path "fbxsdk" | Out-Null
-#     $fbxSdkHome = [System.IO.Path]::Combine((Get-Location), "fbxsdk", "Home")
-#     if ($isWindowsImage) {
-#         $FBXSDK_2020_0_1_VS2017 = "https://damassets.autodesk.net/content/dam/autodesk/www/adn/fbx/2020-0-1/fbx202001_fbxsdk_vs2017_win.exe"
-#         $FbxSdkWindowsInstaller = Join-Path "fbxsdk" "fbxsdk.exe"
-#         Start-FileDownload $FBXSDK_2020_0_1_VS2017 $FbxSdkWindowsInstaller
-#         Start-Process -Wait -FilePath $FbxSdkWindowsInstaller -ArgumentList "/S","/D=$fbxSdkHome"
-#     } else {
-#         $FBXSDK_2020_0_1_CLANG = "https://www.autodesk.com/content/dam/autodesk/www/adn/fbx/2020-0-1/fbx202001_fbxsdk_clang_mac.pkg.tgz"
-#         $FbxSdkMacOSTarball = Join-Path "fbxsdk" "fbxsdk.pkg.tgz"
-#         Start-FileDownload $FBXSDK_2020_0_1_CLANG $FbxSdkMacOSTarball
-#         New-Item -ItemType Directory -Path $fbxSdkHome -Force | Out-Null
-#         & tar -zxvf $FbxSdkMacOSTarball -C $fbxSdkHome | Out-Host
-#     }
-#     return $fbxSdkHome
-# }
+function installFbxSdk {
+    New-Item -ItemType Directory -Path "fbxsdk" | Out-Null
+    if ($isWindowsImage) {
+        $FBXSDK_2020_0_1_VS2017 = "https://damassets.autodesk.net/content/dam/autodesk/www/adn/fbx/2020-0-1/fbx202001_fbxsdk_vs2017_win.exe"
+        $FbxSdkWindowsInstaller = Join-Path "fbxsdk" "fbxsdk.exe"
+        Start-FileDownload $FBXSDK_2020_0_1_VS2017 $FbxSdkWindowsInstaller
+        $fbxSdkHome = [System.IO.Path]::Combine((Get-Location), "fbxsdk", "Home")
+        Start-Process -Wait -FilePath $FbxSdkWindowsInstaller -ArgumentList "/S","/D=$fbxSdkHome"
+    } else {
+        $FBXSDK_2020_0_1_CLANG = "https://www.autodesk.com/content/dam/autodesk/www/adn/fbx/2020-0-1/fbx202001_fbxsdk_clang_mac.pkg.tgz"
+        $FBXSDK_2020_0_1_CLANG_VERSION = "2020.0.1"
+        $fbxSdkMacOSTarball = Join-Path "fbxsdk" "fbxsdk.pkg.tgz"
+        Start-FileDownload $FBXSDK_2020_0_1_CLANG $fbxSdkMacOSTarball
+        $fbxSdkMacOSPkgFileDir = "fbxsdk"
+        & tar -zxvf $fbxSdkMacOSTarball -C $fbxSdkMacOSPkgFileDir | Out-Host
+        $fbxSdkMacOSPkgFile = (Get-ChildItem -Path "$fbxSdkMacOSPkgFileDir/*" -Include "*.pkg").FullName
+        Write-Host "FBX SDK MacOS pkg: $fbxSdkMacOSPkgFile"
+        sudo installer -pkg $fbxSdkMacOSPkgFile -target / | Out-Host
+        $fbxSdkHome = [System.IO.Path]::Combine((Get-Location), "fbxsdk", "Home")
+        # Node gyp incorrectly handle spaces in path
+        New-Item -ItemType SymbolicLink -Path "fbxsdk" -Name Home -Value "/Applications/Autodesk/FBX SDK/$FBXSDK_2020_0_1_CLANG_VERSION" | Out-Host
+    }
+    return $fbxSdkHome
+}
 
-# Write-Host "Node.js verion: $(& node --version)"
-# Write-Host "NPM verion: $(& npm --version)"
+Write-Host "Node.js verion: $(& node --version)"
+Write-Host "NPM verion: $(& npm --version)"
 
-# Write-Host "Installing FBX SDK"
-# $fbxSdkHome = installFbxSdk
-# Write-Host "FBX SDK location: $fbxSdkHome"
-# Get-ChildItem -Path $fbxSdkHome
+Write-Host "Installing FBX SDK"
+$fbxSdkHome = installFbxSdk
+Write-Host "FBX SDK location: $fbxSdkHome"
+Get-ChildItem -Path $fbxSdkHome
 
-# Write-Host "Installing node-gpy"
-# installNodeGyp
+Write-Host "Installing node-gpy"
+installNodeGyp
 
-# # https://github.com/nodejs/node-gyp/issues/893
-# $env:GYP_DEFINES = "FBXSDK=$($fbxSdkHome.Replace('\', '/'))"
-# Write-Host "GYP_DEFINES: $env:GYP_DEFINES"
+# https://github.com/nodejs/node-gyp/issues/893
+$env:GYP_DEFINES = "FBXSDK=""$($fbxSdkHome.Replace('\', '/'))"""
+Write-Host "GYP_DEFINES: $env:GYP_DEFINES"
 
-# $configurateArgs = @('node-gyp', "configure", "--target=$env:TargetNodeVersion", "--ignore-environment=false")
-# if ($isWindowsImage) {
-#     $configurateArgs += "--msvs_version=2019"
-# }
+$configurateArgs = @('node-gyp', "configure", "--target=$env:TargetNodeVersion", "--ignore-environment=false")
+if ($isWindowsImage) {
+    $configurateArgs += "--msvs_version=2019"
+}
 
-# Write-Host "Configuring..."
-# Write-Host "npx $configurateArgs"
-# Start-Process -Wait -FilePath "npx" -ArgumentList $configurateArgs
+Write-Host "Configuring..."
+Write-Host "npx $configurateArgs"
+Start-Process -Wait -FilePath "npx" -ArgumentList $configurateArgs
 
-# Get-Content -Path (Join-Path "build"  "config.gypi") | Out-Host
+Get-Content -Path (Join-Path "build"  "config.gypi") | Out-Host
 
-# $buildArgs = @('node-gyp', "build", "--target=$env:TargetNodeVersion")
-# if ($isWindowsImage) {
-#     $buildArgs += "--msvs_version=2019"
-# }
-# if ($configuration -eq 'Debug') {
-#     $buildArgs += "--debug"
-# }
+$buildArgs = @('node-gyp', "build", "--target=$env:TargetNodeVersion")
+if ($isWindowsImage) {
+    $buildArgs += "--msvs_version=2019"
+}
+if ($configuration -eq 'Debug') {
+    $buildArgs += "--debug"
+}
 
-# Write-Host "Building..."
-# Write-Host "npx $buildArgs"
-# Start-Process -Wait -FilePath "npx" -ArgumentList $buildArgs
+Write-Host "Building..."
+Write-Host "npx $buildArgs"
+Start-Process -Wait -FilePath "npx" -ArgumentList $buildArgs
 
 $buildDir = Join-Path (Get-Location) "build"
+Get-ChildItem "$buildDir/$configuration"
 
+$dynamicLibExtension = if ($isWindowsImage) { ".dll" } else { ".dylib" }
 $artifactDir = New-Item -Name "artifacts" -ItemType Directory -Force
-if ($isWindowsImage) {
-    if ($configuration -eq "Debug") {
-        New-Item -ItemType Directory "$buildDir/Debug" -Force | Out-Null
-        'fbxsdk.node' | Out-File "$buildDir/Debug/fbxsdk.node"
-        'fbxsdk.pdb' | Out-File "$buildDir/Debug/fbxsdk.pdb"
-        'libfbxsdk.dll' | Out-File "$buildDir/Debug/libfbxsdk.dll"
-
-        Copy-Item -Path "$buildDir/Debug/fbxsdk.node" -Destination $artifactDir
-        Copy-Item -Path "$buildDir/Debug/fbxsdk.pdb" -Destination $artifactDir
-        Copy-Item -Path "$buildDir/Debug/libfbxsdk.dll" -Destination $artifactDir
-    } else {
-        New-Item -ItemType Directory "$buildDir/Release" -Force | Out-Null
-        'fbxsdk.node' | Out-File -Force "$buildDir/Release/fbxsdk.node"
-        'libfbxsdk.dll' | Out-File -Force "$buildDir/Release/libfbxsdk.dll"
-
-        Copy-Item -Path "$buildDir/Release/fbxsdk.node" -Destination $artifactDir
-        Copy-Item -Path "$buildDir/Release/libfbxsdk.dll" -Destination $artifactDir
-    }
+Copy-Item -Path "$buildDir/$configuration/fbxsdk.node" -Destination $artifactDir
+Copy-Item -Path "$buildDir/$configuration/libfbxsdk$dynamicLibExtension" -Destination $artifactDir
+if ($isWindowsImage -and ($configuration -eq "Debug")) {
+    Copy-Item -Path "$buildDir/Debug/fbxsdk.pdb" -Destination $artifactDir
 }
 
 $archName = ($env:PLATFORM).ToLower()
